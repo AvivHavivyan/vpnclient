@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <ws2tcpip.h>
 #include <unistd.h>
+#include <stdbool.h>
 #define DEFAULT_PORT "27015"
 #define DEFAULT_BUFLEN 512
 
@@ -79,38 +80,43 @@ int main() {
     const char *sendbuf = "this is a test";
     char recvbuf[DEFAULT_BUFLEN];
 
+    while (true) {
 
 // Send an initial buffer
-    iResult = send(ConnectSocket, sendbuf, (int) strlen(sendbuf), 0);
-    if (iResult == SOCKET_ERROR) {
-        printf("send failed: %d\n", WSAGetLastError());
-        closesocket(ConnectSocket);
-        WSACleanup();
-        return 1;
-    }
+        iResult = send(ConnectSocket, sendbuf, (int) strlen(sendbuf), 0);
+        if (iResult == SOCKET_ERROR) {
+            printf("send failed: %d\n", WSAGetLastError());
+            closesocket(ConnectSocket);
+            WSACleanup();
+            return 1;
+        }
 
-    printf("Bytes Sent: %ld\n", iResult);
+        iResult = shutdown(ConnectSocket, SD_SEND);
+        if (iResult == SOCKET_ERROR) {
+            printf("shutdown failed: %d\n", WSAGetLastError());
+            closesocket(ConnectSocket);
+            WSACleanup();
+            return 1;
+        }
 
-// shutdown the connection for sending since no more data will be sent
-// the client can still use the ConnectSocket for receiving data
-    iResult = shutdown(ConnectSocket, SD_SEND);
-    if (iResult == SOCKET_ERROR) {
-        printf("shutdown failed: %d\n", WSAGetLastError());
-        closesocket(ConnectSocket);
-        WSACleanup();
-        return 1;
+        printf("Bytes Sent: %ld\n", iResult);
+        do {
+            iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
+            if (iResult > 0)
+                printf("Bytes received: %d\n", iResult);
+            else if (iResult == 0)
+                printf("Connection closed\n");
+            else
+                printf("recv failed: %d\n", WSAGetLastError());
+        } while (iResult > 0);
+
     }
+    // shutdown the connection for sending since no more data will be sent
+    // the client can still use the ConnectSocket for receiving data
+
+
 
 // Receive data until the server closes the connection
-    do {
-        iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
-        if (iResult > 0)
-            printf("Bytes received: %d\n", iResult);
-        else if (iResult == 0)
-            printf("Connection closed\n");
-        else
-            printf("recv failed: %d\n", WSAGetLastError());
-    } while (iResult > 0);
 
     // shutdown the send half of the connection since no more data will be sent
     iResult = shutdown(ConnectSocket, SD_SEND);
