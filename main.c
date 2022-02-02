@@ -9,6 +9,17 @@
 #define DEFAULT_PORT "27015"
 #define DEFAULT_BUFLEN 512
 
+#pragma comment (lib, "Ws2_32.lib")
+#pragma comment (lib, "Mswsock.lib")
+#pragma comment (lib, "AdvApi32.lib")
+
+void WSAAPI freeaddrinfo( struct addrinfo* );
+
+int WSAAPI getaddrinfo( const char*, const char*, const struct addrinfo*,
+                        struct addrinfo** );
+
+int WSAAPI getnameinfo( const struct sockaddr*, socklen_t, char*, DWORD,
+                        char*, DWORD, int );
 
 int main() {
     WSADATA wsaData;
@@ -25,6 +36,7 @@ int main() {
             *ptr = NULL,
             hints;
 
+    // reset the memory of hints and set values for each of the following parameters: internet protocol v4, tcp
     ZeroMemory(&hints, sizeof(hints) );
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -60,11 +72,6 @@ int main() {
         ConnectSocket = INVALID_SOCKET;
     }
 
-// Should really try the next address returned by getaddrinfo
-// if the connect call failed
-// But for this simple example we just free the resources
-// returned by getaddrinfo and print an error message
-
     freeaddrinfo(result);
 
     if (ConnectSocket == INVALID_SOCKET) {
@@ -72,64 +79,45 @@ int main() {
         WSACleanup();
         return 1;
     }
-
-#define DEFAULT_BUFLEN 512
-
     int recvbuflen = DEFAULT_BUFLEN;
-
+    // maximum buffer for messages length
     char sendbuf[DEFAULT_BUFLEN];
     char recvbuf[DEFAULT_BUFLEN];
 
     while (true) {
-         fgets(sendbuf, DEFAULT_BUFLEN, stdin);
 
-// Send an initial buffer
-        iResult = send(ConnectSocket, sendbuf, (int) strlen(sendbuf), 0);
-        if (iResult == SOCKET_ERROR) {
-            printf("send failed: %d\n", WSAGetLastError());
-            closesocket(ConnectSocket);
-            WSACleanup();
-            return 1;
-        }
+        // Loop until the message is sent.
+        bool sent = false;
 
-//        iResult = shutdown(ConnectSocket, SD_SEND);
-//        if (iResult == SOCKET_ERROR) {
-//            printf("shutdown failed: %d\n", WSAGetLastError());
-//            closesocket(ConnectSocket);
-//            WSACleanup();
-//            return 1;
-//        }
+        // Resetting buffers
+        memset(sendbuf, 0, sizeof(sendbuf));
+        memset(recvbuf, 0, sizeof(recvbuf));
 
-        printf("Bytes Sent: %ld\n", iResult);
-             iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
-            if (iResult > 0)
-                printf("Bytes received: %d\n", iResult);
-            else if (iResult == 0)
+        // Get user input
+        fgets(sendbuf, DEFAULT_BUFLEN, stdin);
+        int contentLength = strlen(sendbuf);
+        while (!sent) {
+
+            int netContentLength;
+            netContentLength = htonl(contentLength);
+            send(ConnectSocket, &netContentLength, 4, 0);
+            iResult = send(ConnectSocket, sendbuf, contentLength, 0);
+            sent = true;
+
+            if (iResult == SOCKET_ERROR) {
+                printf("send failed: %d\n", WSAGetLastError());
+                closesocket(ConnectSocket);
+                WSACleanup();
+                return 1;
+            }
+
+            iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
+            if (iResult > 0) {
+                printf("%s \n", recvbuf);
+            } else if (iResult == 0)
                 printf("Connection closed\n");
             else
                 printf("recv failed: %d\n", WSAGetLastError());
-//        } while (iResult > 0);
-
+        }
     }
-    // shutdown the connection for sending since no more data will be sent
-    // the client can still use the ConnectSocket for receiving data
-
-
-
-// Receive data until the server closes the connection
-
-    // shutdown the send half of the connection since no more data will be sent
-    iResult = shutdown(ConnectSocket, SD_SEND);
-    if (iResult == SOCKET_ERROR) {
-        printf("shutdown failed: %d\n", WSAGetLastError());
-        closesocket(ConnectSocket);
-        WSACleanup();
-        return 1;
-    }
-    // cleanup
-    closesocket(ConnectSocket);
-    WSACleanup();
-
-    return 0;
-
 }
