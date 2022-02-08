@@ -85,6 +85,7 @@ int main() {
     char recvbuf[DEFAULT_BUFLEN];
 
     while (true) {
+        iResult = 0;
 
         // Loop until the message is sent.
         bool sent = false;
@@ -96,13 +97,38 @@ int main() {
         // Get user input
         fgets(sendbuf, DEFAULT_BUFLEN, stdin);
         int contentLength = strlen(sendbuf);
-        while (!sent) {
 
-            int netContentLength;
-            netContentLength = htonl(contentLength);
-            send(ConnectSocket, &netContentLength, 4, 0);
-            iResult = send(ConnectSocket, sendbuf, contentLength, 0);
-            sent = true;
+        char * message = sendbuf;
+        sent = false;
+        char * startChar;
+        char * endChar;
+        int startIndex = 0;
+        int endIndex = DEFAULT_BUFLEN - 1;
+        int netContentLength = 0;
+        char * curMessage;
+        u_long messageLen = strlen(message);
+
+        while (!sent) {
+            startChar = &message[startIndex];
+            endChar = &message[endIndex];
+            curMessage = calloc(1, endChar - startChar + 1);
+            memcpy(curMessage, startChar, endChar - startChar);
+            startIndex = endIndex + 1;
+            endIndex = endIndex + DEFAULT_BUFLEN;
+
+            //Current batch length.
+            if (contentLength > DEFAULT_BUFLEN) {
+                contentLength -= DEFAULT_BUFLEN;
+                netContentLength = htonl(DEFAULT_BUFLEN);
+                send(ConnectSocket, &netContentLength, 4, 0);
+            }
+            else if (contentLength <= DEFAULT_BUFLEN) {
+                netContentLength = htonl(contentLength);
+                send(ConnectSocket, &netContentLength, 4, 0);
+                iResult = send(ConnectSocket, curMessage, contentLength, 0);
+                sent = true;
+            }
+
 
             if (iResult == SOCKET_ERROR) {
                 printf("send failed: %d\n", WSAGetLastError());
@@ -110,8 +136,22 @@ int main() {
                 WSACleanup();
                 return 1;
             }
+        }
 
-            iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
+        bool received = false;
+        contentLength = 0;
+        netContentLength = 0;
+
+        while (!received) {
+            iResult = recv(ConnectSocket, &netContentLength, 4, 0);
+            contentLength = ntohl(netContentLength);
+            printf("%d \n", contentLength);
+            recv(ConnectSocket, message, contentLength, 0);
+            printf("%s \n", message);
+
+            if (strlen(recvbuf) < DEFAULT_BUFLEN) {
+                received = true;
+            }
             if (iResult > 0) {
                 printf("%s \n", recvbuf);
             } else if (iResult == 0)
