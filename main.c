@@ -96,7 +96,7 @@ int main() {
 
         // Get user input
         fgets(sendbuf, DEFAULT_BUFLEN, stdin);
-        int contentLength = strlen(sendbuf);
+        u_long contentLength = strlen(sendbuf);
 
         char * message = sendbuf;
         sent = false;
@@ -104,7 +104,7 @@ int main() {
         char * endChar;
         int startIndex = 0;
         int endIndex = DEFAULT_BUFLEN - 1;
-        int netContentLength = 0;
+        u_long netContentLength = 0;
         char * curMessage;
         u_long messageLen = strlen(message);
 
@@ -141,13 +141,14 @@ int main() {
         bool received = false;
         contentLength = 0;
         netContentLength = 0;
+        char * msg;
 
         while (!received) {
+            netContentLength = 0;
             iResult = recv(ConnectSocket, &netContentLength, 4, 0);
             contentLength = ntohl(netContentLength);
-            printf("%d \n", contentLength);
-            recv(ConnectSocket, message, contentLength, 0);
-            printf("%s \n", message);
+            recv(ConnectSocket, msg, contentLength, 0);
+            printf("%s \n", msg);
 
             if (strlen(recvbuf) < DEFAULT_BUFLEN) {
                 received = true;
