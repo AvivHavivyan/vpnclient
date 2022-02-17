@@ -141,7 +141,8 @@ int main() {
         bool received = false;
         contentLength = 0;
         netContentLength = 0;
-        char * msg;
+        char msg[DEFAULT_BUFLEN];
+        memset(msg, 0, DEFAULT_BUFLEN);
 
         while (!received) {
             netContentLength = 0;
@@ -155,8 +156,10 @@ int main() {
             }
             if (iResult > 0) {
                 printf("%s \n", recvbuf);
-            } else if (iResult == 0)
+            } else if (iResult == 0) {
                 printf("Connection closed\n");
+                return 0;
+            }
             else
                 printf("recv failed: %d\n", WSAGetLastError());
         }
