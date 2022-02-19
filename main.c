@@ -97,15 +97,11 @@ int main() {
         // Get user input
         gets(sendbuf);
         int contentLength = strlen(sendbuf);
-        printf("%d \n", contentLength);
         char * message = sendbuf;
         sent = false;
-        char * startChar;
-        char * endChar;
         int startIndex = 0;
         int endIndex = DEFAULT_BUFLEN - 1;
         u_long netContentLength = 0;
-//        char * curMessage;
         netContentLength = htonl(contentLength);
         send(ConnectSocket, &netContentLength, 4, 0);
         while (!sent) {
@@ -113,13 +109,8 @@ int main() {
                 endIndex = contentLength;
             }
             char curMessage[endIndex - startIndex + 1];
+            memset(curMessage, 0, DEFAULT_BUFLEN);
             strncpy(curMessage, &message[startIndex], endIndex - startIndex);
-//            printf(curMessage);
-
-//            startChar = &message[startIndex];
-//            endChar = &message[endIndex];
-//            curMessage = calloc(1, endChar - startChar + 1);
-//            memcpy(curMessage, startChar, endChar - startChar);
             startIndex = endIndex + 1;
             endIndex = endIndex + DEFAULT_BUFLEN;
 
