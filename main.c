@@ -95,9 +95,9 @@ int main() {
         memset(recvbuf, 0, sizeof(recvbuf));
 
         // Get user input
-        fgets(sendbuf, DEFAULT_BUFLEN, stdin);
-        u_long contentLength = strlen(sendbuf);
-
+        gets(sendbuf);
+        int contentLength = strlen(sendbuf);
+        printf("%d \n", contentLength);
         char * message = sendbuf;
         sent = false;
         char * startChar;
@@ -105,30 +105,33 @@ int main() {
         int startIndex = 0;
         int endIndex = DEFAULT_BUFLEN - 1;
         u_long netContentLength = 0;
-        char * curMessage;
-        u_long messageLen = strlen(message);
-
+//        char * curMessage;
+        netContentLength = htonl(contentLength);
+        send(ConnectSocket, &netContentLength, 4, 0);
         while (!sent) {
-            startChar = &message[startIndex];
-            endChar = &message[endIndex];
-            curMessage = calloc(1, endChar - startChar + 1);
-            memcpy(curMessage, startChar, endChar - startChar);
+            if (contentLength < DEFAULT_BUFLEN) {
+                endIndex = contentLength;
+            }
+            char curMessage[endIndex - startIndex + 1];
+            strncpy(curMessage, &message[startIndex], endIndex - startIndex);
+//            printf(curMessage);
+
+//            startChar = &message[startIndex];
+//            endChar = &message[endIndex];
+//            curMessage = calloc(1, endChar - startChar + 1);
+//            memcpy(curMessage, startChar, endChar - startChar);
             startIndex = endIndex + 1;
             endIndex = endIndex + DEFAULT_BUFLEN;
 
             //Current batch length.
             if (contentLength > DEFAULT_BUFLEN) {
                 contentLength -= DEFAULT_BUFLEN;
-                netContentLength = htonl(DEFAULT_BUFLEN);
-                send(ConnectSocket, &netContentLength, 4, 0);
+                iResult = send(ConnectSocket, curMessage, DEFAULT_BUFLEN, 0);
             }
             else if (contentLength <= DEFAULT_BUFLEN) {
-                netContentLength = htonl(contentLength);
-                send(ConnectSocket, &netContentLength, 4, 0);
-                iResult = send(ConnectSocket, curMessage, contentLength, 0);
+                iResult = send(ConnectSocket, curMessage, strlen(curMessage), 0);
                 sent = true;
             }
-
 
             if (iResult == SOCKET_ERROR) {
                 printf("send failed: %d\n", WSAGetLastError());
@@ -138,29 +141,36 @@ int main() {
             }
         }
 
+        // add option to handle message len of 0.
+
         bool received = false;
         contentLength = 0;
         netContentLength = 0;
-        char msg[DEFAULT_BUFLEN];
-        memset(msg, 0, DEFAULT_BUFLEN);
-
+        netContentLength = 0;
+        iResult = recv(ConnectSocket, &netContentLength, 4, 0);
+        contentLength = ntohl(netContentLength);
+        char fullmsg[contentLength];
         while (!received) {
-            netContentLength = 0;
-            iResult = recv(ConnectSocket, &netContentLength, 4, 0);
-            contentLength = ntohl(netContentLength);
-            recv(ConnectSocket, msg, contentLength, 0);
-            printf("%s \n", msg);
+            char msg[DEFAULT_BUFLEN];
 
-            if (strlen(recvbuf) < DEFAULT_BUFLEN) {
+            memset(msg, 0, DEFAULT_BUFLEN);
+            memset(fullmsg, 0, DEFAULT_BUFLEN);
+            if (contentLength < DEFAULT_BUFLEN) {
+                recv(ConnectSocket, msg, contentLength, 0);
+                strcat(fullmsg, msg);
+                printf(fullmsg);
                 received = true;
+            } else {
+                contentLength -= DEFAULT_BUFLEN;
+                recv(ConnectSocket, msg, contentLength, 0);
+                strcat(fullmsg, msg);
             }
-            if (iResult > 0) {
-                printf("%s \n", recvbuf);
-            } else if (iResult == 0) {
+            if (iResult == 0) {
                 printf("Connection closed\n");
+                WSACleanup();
                 return 0;
             }
-            else
+            else if (iResult < 0)
                 printf("recv failed: %d\n", WSAGetLastError());
         }
     }
