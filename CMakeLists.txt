@@ -4,4 +4,5 @@ project(vpnclient C)
 set(CMAKE_C_STANDARD 99)
 link_libraries(ws2_32)
 
-add_executable(vpnclient main.c)
+add_executable(vpnclient client.c)
+add_executable(start start.c)
