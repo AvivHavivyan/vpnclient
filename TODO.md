@@ -1,0 +1,4 @@
+- [ ] Encryption
+- [ ] Add UI
+- [ ] Get HTTP response from server and forward to browser/program.
+- [ ] Tidy up code & add comments, split to functions.
