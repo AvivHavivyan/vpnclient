@@ -147,6 +147,7 @@ int main() {
         printf(sendbuf);
 
         int contentLength = strlen(sendbuf);
+        int originalContentLength = contentLength;
         char * message = sendbuf;
         sent = false;
         int startIndex = 0;
@@ -156,23 +157,23 @@ int main() {
         send(ConnectSocket, &netContentLength, 4, 0);
         while (!sent) {
             if (contentLength < DEFAULT_BUFLEN) {
-                endIndex = contentLength;
+                endIndex = originalContentLength;
             }
-            char curMessage[endIndex - startIndex + 1];
+            char curMessage[endIndex];
             memset(curMessage, 0, DEFAULT_BUFLEN);
             strncpy(curMessage, &message[startIndex], endIndex - startIndex);
-            startIndex = endIndex + 1;
-            endIndex = endIndex + DEFAULT_BUFLEN;
 
             //Current batch length.
             if (contentLength > DEFAULT_BUFLEN) {
-                contentLength -= DEFAULT_BUFLEN;
                 iResult = send(ConnectSocket, curMessage, DEFAULT_BUFLEN, 0);
+                startIndex = endIndex;
+                endIndex = endIndex + DEFAULT_BUFLEN;
             }
             else if (contentLength <= DEFAULT_BUFLEN) {
                 iResult = send(ConnectSocket, curMessage, strlen(curMessage), 0);
                 sent = true;
             }
+            contentLength -= DEFAULT_BUFLEN;
 
             if (iResult == SOCKET_ERROR) {
                 printf("send failed: %d\n", WSAGetLastError());
