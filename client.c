@@ -201,6 +201,7 @@ int main() {
                 recv(ConnectSocket, msg, contentLength, 0);
                 strcat(fullmsg, msg);
                 printf(fullmsg);
+                send(ClientSocket, fullmsg, strlen(fullmsg), 0);
                 goto conn;
                 received = true;
             } else {
@@ -216,5 +217,7 @@ int main() {
             else if (iResult < 0)
                 printf("recv failed: %d\n", WSAGetLastError());
         }
+
+        // send response to back to the proxy port.
     }
 }
