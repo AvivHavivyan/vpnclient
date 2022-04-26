@@ -1,4 +1,4 @@
-C:/Users/Aviv/CLionProjects/vpnclient/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/Aviv/CLionProjects/vpnclient/cmake-build-debug/CMakeFiles/vpnclient.dir
-C:/Users/Aviv/CLionProjects/vpnclient/cmake-build-debug/CMakeFiles/start.dir
-C:/Users/Aviv/CLionProjects/vpnclient/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+C:/Users/Aviv/source/repos/firstapp/vpnclient/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/Aviv/source/repos/firstapp/vpnclient/cmake-build-debug/CMakeFiles/vpnclient.dir
+C:/Users/Aviv/source/repos/firstapp/vpnclient/cmake-build-debug/CMakeFiles/start.dir
+C:/Users/Aviv/source/repos/firstapp/vpnclient/cmake-build-debug/CMakeFiles/rebuild_cache.dir
