@@ -41,7 +41,7 @@ int connecttoserver(SOCKET * ConnectSocket, SOCKET * ListenSocket, struct addrin
     }
     if (*ConnectSocket == INVALID_SOCKET) {
         printf("Error at socket(): %ld\n", WSAGetLastError());
-        freeaddrinfo(result);
+//        freeaddrinfo(result);
         WSACleanup();
         return 1;
     }
@@ -254,8 +254,5 @@ int main() {
     system("reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\" /v \"ProxyServer\" /t REG_SZ /d \"127.0.0.1:5102\" /f");
     system("reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\" /v \"ProxyEnable\" /t REG_DWORD /d \"1\" /f");
     thread(&ListenSocket, &ConnectSocket, listen_addr, ptr, result);
-
-
-
 
 }
