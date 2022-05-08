@@ -15,10 +15,19 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="379f0212-e1b1-4299-8ba9-678934d5b2ea" name="Changes" comment="split code into a few functions in preparation for multithreading.">
+    <list default="true" id="35cf097c-e492-4446-afbf-064ff93912f5" name="Changes" comment="added send back to proxy port.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client.c" beforeDir="false" afterPath="$PROJECT_DIR$/client.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/CMakeOutput.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/CMakeOutput.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/TargetDirectories.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/TargetDirectories.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-environment.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-environment.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-log.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-log.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/build.ninja" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/build.ninja" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/cmake_install.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/cmake_install.cmake" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,10 +54,6 @@
       <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
     </file-type-list>
   </component>
-  <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/start.c" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/client.c" root0="FORCE_HIGHLIGHTING" />
-  </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
@@ -71,7 +76,7 @@
     <property name="cf.first.check.clang-format" value="false" />
     <property name="cidr.known.project.marker" value="true" />
     <property name="cmake.loaded.for.project" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../vpn" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
@@ -80,7 +85,7 @@
     <property name="structure.view.defaults.are.configured" value="true" />
   </component>
   <component name="RunManager" selected="CMake Application.start">
-    <configuration name="start" type="CMakeRunConfiguration" factoryName="Application" temporary="true" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="vpnclient" TARGET_NAME="start" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="vpnclient" RUN_TARGET_NAME="start">
+    <configuration name="start" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="vpnclient" TARGET_NAME="start" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="vpnclient" RUN_TARGET_NAME="start">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -96,7 +101,6 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="CMake Application.start" />
         <item itemvalue="CMake Application.vpnclient" />
       </list>
     </recent_temporary>
@@ -104,7 +108,7 @@
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="379f0212-e1b1-4299-8ba9-678934d5b2ea" name="Changes" comment="fixed buffer error" />
+      <changelist id="35cf097c-e492-4446-afbf-064ff93912f5" name="Changes" comment="" />
       <created>1643313936109</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
@@ -147,21 +151,11 @@
       <workItem from="1650210958100" duration="8836000" />
       <workItem from="1650277331401" duration="7827000" />
       <workItem from="1650389868311" duration="4557000" />
-      <workItem from="1650449613778" duration="8755000" />
-      <workItem from="1650571781469" duration="2517000" />
-      <workItem from="1650709022535" duration="2522000" />
-      <workItem from="1650714749908" duration="3510000" />
-      <workItem from="1650813026224" duration="1302000" />
-      <workItem from="1650882112882" duration="9807000" />
-      <workItem from="1650904012128" duration="7080000" />
-      <workItem from="1650911288514" duration="27000" />
-      <workItem from="1650989252547" duration="1434000" />
-      <workItem from="1651572692755" duration="3255000" />
-      <workItem from="1651609310152" duration="2169000" />
-      <workItem from="1651747036497" duration="2577000" />
-      <workItem from="1651774181802" duration="3903000" />
-      <workItem from="1651782092484" duration="119000" />
-      <workItem from="1651858127912" duration="1000" />
+      <workItem from="1650449613778" duration="11360000" />
+      <workItem from="1651858247771" duration="3247000" />
+      <workItem from="1651927109939" duration="1698000" />
+      <workItem from="1652022333302" duration="294000" />
+      <workItem from="1652023178476" duration="5934000" />
     </task>
     <task id="LOCAL-00001" summary="multiple messages?(not working)">
       <created>1643473277918</created>
@@ -226,12 +220,12 @@
       <option name="project" value="LOCAL" />
       <updated>1650222012072</updated>
     </task>
-    <task id="LOCAL-00010" summary="split code into a few functions in preparation for multithreading.">
-      <created>1650990096162</created>
+    <task id="LOCAL-00010" summary="added send back to proxy port.">
+      <created>1650480662696</created>
       <option name="number" value="00010" />
       <option name="presentableId" value="LOCAL-00010" />
       <option name="project" value="LOCAL" />
-      <updated>1650990096178</updated>
+      <updated>1650480662696</updated>
     </task>
     <option name="localTasksCounter" value="11" />
     <servers />
@@ -249,7 +243,6 @@
         </entry>
       </map>
     </option>
-    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="multiple messages?(not working)" />
@@ -262,7 +255,33 @@
     <MESSAGE value="added .gitignore" />
     <MESSAGE value="added .gitignore (added files back)" />
     <MESSAGE value="fixed buffer error" />
-    <MESSAGE value="split code into a few functions in preparation for multithreading." />
-    <option name="LAST_COMMIT_MESSAGE" value="split code into a few functions in preparation for multithreading." />
+    <MESSAGE value="added send back to proxy port." />
+    <option name="LAST_COMMIT_MESSAGE" value="added send back to proxy port." />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/client.c</url>
+          <line>158</line>
+          <option name="timeStamp" value="21" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/client.c</url>
+          <line>119</line>
+          <option name="timeStamp" value="30" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/client.c</url>
+          <line>114</line>
+          <option name="timeStamp" value="31" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+    <watches-manager>
+      <configuration name="CMakeRunConfiguration">
+        <watch expression="iResult" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>

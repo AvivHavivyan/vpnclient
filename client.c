@@ -23,23 +23,23 @@ int WSAAPI getaddrinfo( const char*, const char*, const struct addrinfo*,
 int WSAAPI getnameinfo( const struct sockaddr*, socklen_t, char*, DWORD,
                         char*, DWORD, int );
 
-int connecttoserver(SOCKET * ConnectSocket, SOCKET * ListenSocket, struct addrinfo * result, struct addrinfo * ptr, struct addrinfo * listen_addr) {
-    ptr=result;
+SOCKET connecttoserver( struct addrinfo * result) {
     int iResult;
+//    SOCKET ListenSocket = socket(listen_addr->ai_family, listen_addr->ai_socktype, listen_addr->ai_protocol);
+
 
 // Create a SOCKET for connecting to server
-    *ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype,ptr->ai_protocol);
-    *ListenSocket = socket(listen_addr->ai_family, listen_addr->ai_socktype, listen_addr->ai_protocol);
-    iResult = bind(*ListenSocket, listen_addr->ai_addr, (int)listen_addr->ai_addrlen);
+    SOCKET ConnectSocket = socket(result->ai_family, result->ai_socktype,result->ai_protocol);
+//    iResult = bind(ListenSocket, listen_addr->ai_addr, (int)listen_addr->ai_addrlen);
 
-    if (iResult == SOCKET_ERROR) {
-        printf("bind failed with error: %d\n", WSAGetLastError());
-        freeaddrinfo(result);
-        closesocket(*ListenSocket);
-        WSACleanup();
-        return 1;
-    }
-    if (*ConnectSocket == INVALID_SOCKET) {
+//    if (iResult == SOCKET_ERROR) {
+//        printf("bind failed with error: %d\n", WSAGetLastError());
+//        freeaddrinfo(result);
+//        closesocket(ListenSocket);
+//        WSACleanup();
+//        return 1;
+//    }
+    if (ConnectSocket == INVALID_SOCKET) {
         printf("Error at socket(): %ld\n", WSAGetLastError());
 //        freeaddrinfo(result);
         WSACleanup();
@@ -47,49 +47,28 @@ int connecttoserver(SOCKET * ConnectSocket, SOCKET * ListenSocket, struct addrin
     }
 
     // Connect to server.
-    iResult = connect(*ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+    iResult = connect(ConnectSocket, result->ai_addr, (int)result->ai_addrlen);
     if (iResult == SOCKET_ERROR) {
-        closesocket(*ConnectSocket);
-        *ConnectSocket = INVALID_SOCKET;
+        closesocket(ConnectSocket);
+        ConnectSocket = INVALID_SOCKET;
     }
 
-    freeaddrinfo(result);
+//    freeaddrinfo(result);
 
-    if (*ConnectSocket == INVALID_SOCKET) {
+    if (ConnectSocket == INVALID_SOCKET) {
         printf("Unable to connect to server!\n");
         WSACleanup();
         return 1;
     }
-    return 0;
+    return ConnectSocket;
 }
 
-int thread(SOCKET * ListenSocket, SOCKET * ConnectSocket, struct addrinfo * listen_addr, struct addrinfo * ptr, struct addrinfo * result) {
+int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo * ptr, struct addrinfo * result) {
     int iResult = 0;
     char sendbuf[2048];
     char recvbuf[DEFAULT_BUFLEN];
 
-    conn:
-    iResult = bind(*ListenSocket, listen_addr->ai_addr, (int)listen_addr->ai_addrlen);
-    printf("Listening... ");
-    if (listen(*ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
-        printf("Listen failed with error: %d\n", WSAGetLastError());
-        closesocket(*ListenSocket);
-        WSACleanup();
-        return 1;
-    }
-
-    SOCKET ProxySocket = INVALID_SOCKET;
-    ProxySocket = INVALID_SOCKET;
-
-    ProxySocket = accept(*ListenSocket, NULL, NULL);
-    if (ProxySocket == INVALID_SOCKET) {
-        closesocket(*ListenSocket);
-        WSACleanup();
-        return 1;
-    } else {
-        closesocket(*ListenSocket);
-        printf("Connected. \n");
-    }
+//    conn:
 
     while (true) {
         iResult = 0;
@@ -102,14 +81,14 @@ int thread(SOCKET * ListenSocket, SOCKET * ConnectSocket, struct addrinfo * list
         memset(recvbuf, 0, sizeof(recvbuf));
 
         // Intercept http requests
-        recv(ProxySocket, sendbuf, 2048, 0);
+        recv(*ProxySocket, sendbuf, 2048, 0);
 
         // Get user input
 //        gets(sendbuf);
 
         printf(sendbuf);
 
-        connecttoserver(ConnectSocket, ListenSocket, result, ptr, listen_addr);
+        SOCKET VpnSocket = connecttoserver(result);
 
         int contentLength = strlen(sendbuf);
         int originalContentLength = contentLength;
@@ -119,7 +98,7 @@ int thread(SOCKET * ListenSocket, SOCKET * ConnectSocket, struct addrinfo * list
         int endIndex = DEFAULT_BUFLEN - 1;
         u_long netContentLength = 0;
         netContentLength = htonl(contentLength);
-        send(*ConnectSocket, &netContentLength, 4, 0);
+        send(VpnSocket, &netContentLength, 4, 0);
         while (!sent) {
             if (contentLength < DEFAULT_BUFLEN) {
                 endIndex = originalContentLength;
@@ -130,19 +109,19 @@ int thread(SOCKET * ListenSocket, SOCKET * ConnectSocket, struct addrinfo * list
 
             //Current batch length.
             if (contentLength > DEFAULT_BUFLEN) {
-                iResult = send(*ConnectSocket, curMessage, DEFAULT_BUFLEN, 0);
+                iResult = send(VpnSocket, curMessage, DEFAULT_BUFLEN, 0);
                 startIndex = endIndex;
                 endIndex = endIndex + DEFAULT_BUFLEN;
             }
             else if (contentLength <= DEFAULT_BUFLEN) {
-                iResult = send(*ConnectSocket, curMessage, strlen(curMessage), 0);
+                iResult = send(VpnSocket, curMessage, strlen(curMessage), 0);
                 sent = true;
             }
             contentLength -= DEFAULT_BUFLEN;
 
             if (iResult == SOCKET_ERROR) {
                 printf("send failed: %d\n", WSAGetLastError());
-                closesocket(*ConnectSocket);
+                closesocket(VpnSocket);
                 WSACleanup();
                 return 1;
             }
@@ -154,7 +133,7 @@ int thread(SOCKET * ListenSocket, SOCKET * ConnectSocket, struct addrinfo * list
         netContentLength = 0;
         iResult = 0;
         while (iResult == 0) {
-            iResult = recv(*ConnectSocket, &netContentLength, 4, 0);
+            iResult = recv(VpnSocket, &netContentLength, 4, 0);
         }
         contentLength = ntohl(netContentLength);
         char fullmsg[contentLength];
@@ -162,7 +141,7 @@ int thread(SOCKET * ListenSocket, SOCKET * ConnectSocket, struct addrinfo * list
 
         if (contentLength == 0) {
             printf("Connection to vpn server terminated unexpectedly.");
-            closesocket(*ConnectSocket);
+            closesocket(VpnSocket);
             WSACleanup();
             return -1;
         }
@@ -174,24 +153,25 @@ int thread(SOCKET * ListenSocket, SOCKET * ConnectSocket, struct addrinfo * list
             memset(msg, 0, DEFAULT_BUFLEN);
 
             if (contentLength < DEFAULT_BUFLEN) {
-                iResult = recv(*ConnectSocket, msg, contentLength, 0);
+                iResult = recv(VpnSocket, msg, contentLength, 0);
                 strcat(fullmsg, msg);
                 printf(fullmsg);
-                send(ProxySocket, fullmsg, strlen(fullmsg), 0);
-                closesocket(ProxySocket);
-                closesocket(*ConnectSocket);
+                send(*ProxySocket, fullmsg, strlen(fullmsg), 0);
+                closesocket(*ProxySocket);
+                closesocket(VpnSocket);
+                return 0;
 //                continue;
-                goto conn;
+//                goto conn;
                 received = true;
             } else {
-                iResult = recv(*ConnectSocket, msg, DEFAULT_BUFLEN, 0);
+                iResult = recv(VpnSocket, msg, DEFAULT_BUFLEN, 0);
                 strcat(fullmsg, msg);
                 contentLength -= DEFAULT_BUFLEN;
             }
             if (iResult == SOCKET_ERROR) {
                 printf("Connection closed\n");
                 WSACleanup();
-                return 0;
+                return 1;
             }
             else if (iResult < 0)
                 printf("recv failed: %d\n", WSAGetLastError());
@@ -253,6 +233,35 @@ int main() {
 
     system("reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\" /v \"ProxyServer\" /t REG_SZ /d \"127.0.0.1:5102\" /f");
     system("reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\" /v \"ProxyEnable\" /t REG_DWORD /d \"1\" /f");
-    thread(&ListenSocket, &ConnectSocket, listen_addr, ptr, result);
+
+    iResult = bind(ListenSocket, listen_addr->ai_addr, (int)listen_addr->ai_addrlen);
+    if (iResult == SOCKET_ERROR) {
+        return 1;
+    }
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
+    while (1) {
+        printf("Listening... ");
+        if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
+            printf("Listen failed with error: %d\n", WSAGetLastError());
+            closesocket(ListenSocket);
+            WSACleanup();
+            return 1;
+        }
+
+        SOCKET ProxySocket = accept(ListenSocket, NULL, NULL);
+
+        if (ProxySocket == INVALID_SOCKET) {
+            closesocket(ListenSocket);
+            WSACleanup();
+            return 1;
+        } else {
+//            closesocket(ListenSocket);
+            printf("Connected. \n");
+        }
+        thread( &ProxySocket, listen_addr, ptr, result);
+    }
+#pragma clang diagnostic pop
 
 }
