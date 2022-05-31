@@ -25,23 +25,12 @@ int WSAAPI getnameinfo( const struct sockaddr*, socklen_t, char*, DWORD,
 
 SOCKET connecttoserver( struct addrinfo * result) {
     int iResult;
-//    SOCKET ListenSocket = socket(listen_addr->ai_family, listen_addr->ai_socktype, listen_addr->ai_protocol);
-
 
 // Create a SOCKET for connecting to server
     SOCKET ConnectSocket = socket(result->ai_family, result->ai_socktype,result->ai_protocol);
-//    iResult = bind(ListenSocket, listen_addr->ai_addr, (int)listen_addr->ai_addrlen);
 
-//    if (iResult == SOCKET_ERROR) {
-//        printf("bind failed with error: %d\n", WSAGetLastError());
-//        freeaddrinfo(result);
-//        closesocket(ListenSocket);
-//        WSACleanup();
-//        return 1;
-//    }
     if (ConnectSocket == INVALID_SOCKET) {
         printf("Error at socket(): %ld\n", WSAGetLastError());
-//        freeaddrinfo(result);
         WSACleanup();
         return 1;
     }
@@ -52,8 +41,6 @@ SOCKET connecttoserver( struct addrinfo * result) {
         closesocket(ConnectSocket);
         ConnectSocket = INVALID_SOCKET;
     }
-
-//    freeaddrinfo(result);
 
     if (ConnectSocket == INVALID_SOCKET) {
         printf("Unable to connect to server!\n");
@@ -83,8 +70,11 @@ int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo 
         // Intercept http requests
         recv(*ProxySocket, sendbuf, 2048, 0);
 
-        // Get user input
-//        gets(sendbuf);
+        //filter out https requests (e.g. CONNECT)
+        // TODO: (improve filtering - to be within the first word.)
+        if (strstr(sendbuf, "CONNECT")) {
+            break;
+        }
 
         printf(sendbuf);
 
@@ -127,7 +117,7 @@ int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo 
             }
         }
 
-        // add option to handle message len of 0.
+        // TODO: add option to handle message len of 0.
 
         bool received = false;
         netContentLength = 0;
@@ -160,9 +150,6 @@ int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo 
                 closesocket(*ProxySocket);
                 closesocket(VpnSocket);
                 return 0;
-//                continue;
-//                goto conn;
-                received = true;
             } else {
                 iResult = recv(VpnSocket, msg, DEFAULT_BUFLEN, 0);
                 strcat(fullmsg, msg);
@@ -177,11 +164,13 @@ int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo 
                 printf("recv failed: %d\n", WSAGetLastError());
         }
 
-        // send response to back to the proxy port.
+        // TODO: send response to back to the proxy port.
 
     }
 
 }
+
+// TODO: add multithreading
 
 int main() {
     WSADATA wsaData;
@@ -226,9 +215,6 @@ int main() {
 // Attempt to connect to the first address returned by
 // the call to getaddrinfo
 
-    // maximum buffer for messages length
-
-
     ListenSocket = socket(listen_addr->ai_family, listen_addr->ai_socktype, listen_addr->ai_protocol);
 
     system("reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\" /v \"ProxyServer\" /t REG_SZ /d \"127.0.0.1:5102\" /f");
@@ -238,6 +224,7 @@ int main() {
     if (iResult == SOCKET_ERROR) {
         return 1;
     }
+    //TODO: ping the server every once in a while.
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
@@ -257,7 +244,6 @@ int main() {
             WSACleanup();
             return 1;
         } else {
-//            closesocket(ListenSocket);
             printf("Connected. \n");
         }
         thread( &ProxySocket, listen_addr, ptr, result);
