@@ -7,9 +7,15 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <process.h>
+#include <time.h>
+#include <openssl/crypto.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+
 #define DEFAULT_PORT "27015"
 #define LISTEN_PORT "5102"
 #define DEFAULT_BUFLEN 512
+#define KEY_LEN 256
 
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
@@ -50,12 +56,138 @@ SOCKET connecttoserver( struct addrinfo * result) {
     return ConnectSocket;
 }
 
+// Start a session
+int auth(struct addrinfo * server, RSA * key) {
+    // connect
+    SOCKET AuthSocket = connecttoserver(server);
+
+    // check server's public key
+//    time_t t = time();
+
+    // request updated key if necessary
+    char * requestMsg = "get-key";
+    int contentLength = strlen(requestMsg);
+    u_long netContentLength = 0;
+    netContentLength = htonl(contentLength);
+    send(AuthSocket, &netContentLength, 4, 0);
+
+    send(AuthSocket, requestMsg, contentLength, 0);
+    char publicKeyServer[KEY_LEN];
+
+    // receive key
+    recv(AuthSocket, publicKeyServer, KEY_LEN, 0);
+
+    // cache key
+    FILE *fptr;
+    fptr = fopen("C:\\Users\\Aviv\\serverkey_client.pem","wb");
+    if(fptr!=NULL){
+        fwrite(publicKeyServer, 1, KEY_LEN, fptr);
+        fclose(fptr);
+    } else {
+        perror("file error");
+    }
+    int length;
+
+    // send client's public key
+    fptr = fopen("C:\\Users\\Aviv\\public_client.pem","rb");
+    if (fptr)
+    {
+        fseek (fptr, 0, SEEK_END);
+        length = ftell (fptr);
+        char buffer[length];
+        rewind(fptr);
+        if (buffer)
+        {
+            fread (buffer, 1, length, fptr);
+        }
+        fclose (fptr);
+        send(AuthSocket, buffer, 256, 0);
+        closesocket(AuthSocket);
+        return 0;
+    }
+
+    return 0;
+}
+
+int genKey() {
+    // check for existing key
+    RSA * key = 0;
+    struct bignum_st * bn = 0;
+    int err = 0;
+    if (!(key = RSA_new())) return -1;
+    if (!(bn = BN_new())) return -2;
+    if (!(err = BN_set_word(bn,RSA_F4))) {
+        BN_free(bn);
+        return err;
+    }
+
+    if (!(err = RSA_generate_key_ex(key,2048,bn,NULL))) {
+        BN_free(bn);
+        RSA_free(key);
+        return err;
+    }
+
+    RSA * private = RSAPrivateKey_dup(key);
+    RSA * public = RSAPublicKey_dup(key);
+
+    const unsigned char test[4] = "Test";
+    u_char encrypted[RSA_size(key)];
+    RSA_public_encrypt(4, test, encrypted, key, RSA_PKCS1_OAEP_PADDING);
+    u_char decrypted[4];
+    RSA_private_decrypt(256, encrypted, decrypted, key, RSA_PKCS1_OAEP_PADDING);
+
+
+    FILE *fptr;
+    fptr = fopen("C:\\Users\\Aviv\\private_client.pem","wb");
+    fwrite(key, 1, 256, fptr);
+    fclose(fptr);
+
+    fptr = fopen("C:\\Users\\Aviv\\public_client.pem","wb");
+    fwrite(public, 1, 256, fptr);
+    fclose(fptr);
+
+    return 0;
+}
+
 int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo * ptr, struct addrinfo * result) {
     int iResult = 0;
     char sendbuf[2048];
     char recvbuf[DEFAULT_BUFLEN];
+    RSA * keypair;
+    RSA * serverKey;
+    FILE *fptr;
+    int length = 0;
 
-//    conn:
+    fptr = fopen("C:\\Users\\Aviv\\private_client.pem","rb");
+    if (fptr)
+    {
+        fseek (fptr, 0, SEEK_END);
+        length = ftell (fptr);
+        char buffer[length];
+        rewind(fptr);
+        if (buffer)
+        {
+            fread (buffer, 1, length, fptr);
+            keypair = (RSA *)buffer;
+        }
+        fclose (fptr);
+    }
+
+    fptr = fopen("C:\\Users\\Aviv\\serverkey_client.pem","rb");
+    if (fptr)
+    {
+        fseek (fptr, 0, SEEK_END);
+        length = ftell (fptr);
+        char buffer[length];
+        rewind(fptr);
+        fread (buffer, 1, length, fptr);
+        serverKey = (RSA *)buffer;
+        fclose (fptr);
+    } else {
+        printf("No key was found. restart the client to try again");
+        return -1;
+    }
+
 
     while (true) {
         iResult = 0;
@@ -68,7 +200,9 @@ int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo 
         memset(recvbuf, 0, sizeof(recvbuf));
 
         // Intercept http requests
-        recv(*ProxySocket, sendbuf, 2048, 0);
+        // TODO: get entire requests.
+        iResult = recv(*ProxySocket, sendbuf, 2048, 0);
+
 
         //filter out https requests (e.g. CONNECT)
         // TODO: (improve filtering - to be within the first word.)
@@ -76,38 +210,59 @@ int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo 
             break;
         }
 
+
+        // cut out accept encoding
+        // TODO: test that it's only GET
+        char * pointer = strstr(sendbuf,"Accept-Encoding");
+        memset(pointer, 0, strlen(pointer));
+        strcat(sendbuf, "\r\n\r\n");
+
         printf(sendbuf);
 
         SOCKET VpnSocket = connecttoserver(result);
 
-        int contentLength = strlen(sendbuf);
-        int originalContentLength = contentLength;
+        int contentLength = iResult;
         char * message = sendbuf;
         sent = false;
+        int bytes_left = contentLength;
         int startIndex = 0;
-        int endIndex = DEFAULT_BUFLEN - 1;
+        int endIndex = DEFAULT_BUFLEN;
         u_long netContentLength = 0;
+
+        // send the length of the request to the server as part of the protocol
         netContentLength = htonl(contentLength);
+        unsigned char * netLen = (unsigned char * )&netContentLength;
+
         send(VpnSocket, &netContentLength, 4, 0);
+
+        // main loop, send the request to the server.
         while (!sent) {
+
+            // if the final batch is reached, endIndex would be the content length.
             if (contentLength < DEFAULT_BUFLEN) {
-                endIndex = originalContentLength;
+                endIndex = contentLength;
             }
+
+            // Reset variables to use, set curMessage to the updated endIndex
             char curMessage[endIndex];
             memset(curMessage, 0, DEFAULT_BUFLEN);
-            strncpy(curMessage, &message[startIndex], endIndex - startIndex);
+            memcpy(curMessage, &message[startIndex], endIndex - startIndex);
 
             //Current batch length.
-            if (contentLength > DEFAULT_BUFLEN) {
+            if (bytes_left > DEFAULT_BUFLEN) {
                 iResult = send(VpnSocket, curMessage, DEFAULT_BUFLEN, 0);
                 startIndex = endIndex;
                 endIndex = endIndex + DEFAULT_BUFLEN;
             }
-            else if (contentLength <= DEFAULT_BUFLEN) {
-                iResult = send(VpnSocket, curMessage, strlen(curMessage), 0);
+
+            // Final batch.
+            else if (bytes_left <= DEFAULT_BUFLEN) {
+                iResult = send(VpnSocket, curMessage, bytes_left, 0);
+                bytes_left = 0;
                 sent = true;
             }
-            contentLength -= DEFAULT_BUFLEN;
+
+            bytes_left -= iResult;
 
             if (iResult == SOCKET_ERROR) {
                 printf("send failed: %d\n", WSAGetLastError());
@@ -119,13 +274,20 @@ int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo 
 
         // TODO: add option to handle message len of 0.
 
-        bool received = false;
+        // RECEIVING PART //
+
+        // Receive response length
         netContentLength = 0;
         iResult = 0;
+
         while (iResult == 0) {
             iResult = recv(VpnSocket, &netContentLength, 4, 0);
         }
+
         contentLength = ntohl(netContentLength);
+        bytes_left = contentLength;
+
+        // Message to be sent, buffer is appended to it.
         char fullmsg[contentLength];
         memset(fullmsg, 0, strlen(fullmsg));
 
@@ -136,25 +298,45 @@ int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo 
             return -1;
         }
 
+        int prevLen = 0;
 
-        while (!received) {
+        // Receive the response content
+        while (1) {
             char msg[DEFAULT_BUFLEN];
 
             memset(msg, 0, DEFAULT_BUFLEN);
 
-            if (contentLength < DEFAULT_BUFLEN) {
-                iResult = recv(VpnSocket, msg, contentLength, 0);
-                strcat(fullmsg, msg);
-                printf(fullmsg);
-                send(*ProxySocket, fullmsg, strlen(fullmsg), 0);
+            // Final batch reached
+            if (bytes_left < DEFAULT_BUFLEN) {
+                iResult = recv(VpnSocket, msg, bytes_left, 0);
+                memset(fullmsg + prevLen, 0, iResult);
+                memcpy(fullmsg + prevLen, msg, iResult);
+                bytes_left -= iResult;
+
+//                FILE *fptr;
+//                fptr = fopen("C:\\Users\\Aviv\\client.bin","wb");
+//                fwrite(fullmsg, 1, contentLength, fptr);
+//                fclose(fptr);
+
+                // Logging
+                printf("fullmsg: %s", fullmsg);
+                printf("total: %d", contentLength);
+
+                // Send to win proxy (which in turn will send to browser) and exit the function,
+                // closing open sockets.
+                send(*ProxySocket, fullmsg, contentLength, 0);
                 closesocket(*ProxySocket);
                 closesocket(VpnSocket);
                 return 0;
             } else {
+                // Any other batch - receive and append.
                 iResult = recv(VpnSocket, msg, DEFAULT_BUFLEN, 0);
-                strcat(fullmsg, msg);
-                contentLength -= DEFAULT_BUFLEN;
+                memcpy(fullmsg + prevLen, msg, iResult);
+
+                prevLen += iResult;
+                bytes_left -= iResult;
             }
+
             if (iResult == SOCKET_ERROR) {
                 printf("Connection closed\n");
                 WSACleanup();
@@ -163,8 +345,6 @@ int thread(SOCKET * ProxySocket, struct addrinfo * listen_addr, struct addrinfo 
             else if (iResult < 0)
                 printf("recv failed: %d\n", WSAGetLastError());
         }
-
-        // TODO: send response to back to the proxy port.
 
     }
 
@@ -226,6 +406,10 @@ int main() {
     }
     //TODO: ping the server every once in a while.
 
+    RSA * key = RSA_new();
+    genKey();
+    auth(result, key);
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
     while (1) {
@@ -246,8 +430,10 @@ int main() {
         } else {
             printf("Connected. \n");
         }
+
+        iResult = getaddrinfo("127.0.0.1", DEFAULT_PORT, &hints, &result);
+
         thread( &ProxySocket, listen_addr, ptr, result);
     }
 #pragma clang diagnostic pop
-
 }
