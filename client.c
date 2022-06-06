@@ -224,6 +224,7 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
         memset(proxyBuffer, 0, sizeof(proxyBuffer));
 
         // Intercept http requests
+        // TODO: accept entire requests + body
         int bytesRecvProxy = 0;
         char * request = (char *)malloc(DEFAULT_BUFLEN);
         while (!strstr(proxyBuffer, "\r\n\r\n")) {
@@ -277,30 +278,7 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
                 bytesRecvProxy += iResult;
                 bytesLeftProxy = total - bytesRecvProxy;
             }
-            // cut out accept encoding
-//            if (strstr(requestCopyTmp, "accept-encoding")) {
-//                char *reqcopy = malloc(total);
-//                int newHeadersLen = 0;
-//                memcpy(reqcopy, request, bytesRecvProxy);
-//
-//                char *pointer = strstr(reqcopy, "Accept-Encoding");
-//                memset(pointer, 0, strlen(pointer));
-//                newHeadersLen = (int)strlen(reqcopy);
-//                memcpy(reqcopy + newHeadersLen, terminators, total - newHeadersLen);
-//                contentLength = newHeadersLen + getContentLength(reqcopy) + 4;
-//                request = malloc(sizeof(reqcopy));
-//                request = reqcopy;
-//            }
         }
-//        else {
-//            if (strstr(request, "Accept-Encoding")) {
-//
-//                char *pointer = strstr(request, "Accept-Encoding");
-//                memset(pointer, 0, strlen(pointer));
-//                strcat(request, "\r\n\r\n");
-//            }
-//            contentLength = strlen(request) - 2;
-//        }
 
 
         printf(request);
@@ -375,8 +353,6 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
             }
         }
         int bytesRecv = 0;
-
-        // TODO: add option to handle message len of 0.
 
         // RECEIVING PART //
 
@@ -484,7 +460,8 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
 
 }
 
-// TODO: add multithreading
+// TODO: add multithreading?
+
 
 int main() {
     WSADATA wsaData;
