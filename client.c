@@ -6,11 +6,11 @@
 #include <ws2tcpip.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <process.h>
-#include <time.h>
 #include <openssl/crypto.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
+#include <winsock2.h>
+
 
 #define DEFAULT_PORT "27015"
 #define LISTEN_PORT "5102"
@@ -20,20 +20,23 @@
 #define PRIVATE_KEY_PATH "private_client.pem"
 #define PUBLIC_KEY_PATH "public_client.pem"
 #define SERVER_KEY_PATH "serverkey_client.pem"
+#define SESSION_ID_LEN 64
 
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
 
-void WSAAPI freeaddrinfo( struct addrinfo* );
+//void WSAAPI freeaddrinfo( struct addrinfo* );
+//
+//int WSAAPI getaddrinfo( const char*, const char*, const struct addrinfo*,
+//                        struct addrinfo** );
+//
+//int WSAAPI getnameinfo( const struct sockaddr*, socklen_t, char*, DWORD,
+//                        char*, DWORD, int );
 
-int WSAAPI getaddrinfo( const char*, const char*, const struct addrinfo*,
-                        struct addrinfo** );
 
-int WSAAPI getnameinfo( const struct sockaddr*, socklen_t, char*, DWORD,
-                        char*, DWORD, int );
-
-SOCKET connecttoserver( struct addrinfo * result) {
+// TODO: add comments
+SOCKET connectToServer(struct addrinfo * result) {
     int iResult;
 
 // Create a SOCKET for connecting to server
@@ -60,7 +63,7 @@ SOCKET connecttoserver( struct addrinfo * result) {
     return ConnectSocket;
 }
 
-char * lowerstring(char * str) {
+char * lowerString(char * str) {
     for (int i = 0; i < strlen(str); i++) {
         str[i] = (char)tolower((int)str[i]);
     }
@@ -71,7 +74,7 @@ int getContentLength(char * response) {
     char * header = "content-length";
     char rspcpy[strlen(response)];
     strcpy(rspcpy, response);
-    lowerstring(rspcpy);
+    lowerString(rspcpy);
     char * substr = strstr(rspcpy, header);
     char * delim = "\n";
     char * header_line = strtok(substr, delim);
@@ -84,70 +87,81 @@ int getContentLength(char * response) {
     return atoi(len_str);
 }
 
-// Start a session
-int auth(struct addrinfo * server, RSA * key) {
-    // connect
-    printf("Authenticating... \n");
-    SOCKET AuthSocket = connecttoserver(server);
+char * retrieveKey(int flag) {
 
-    // check server's public key
-//    time_t t = time();
-
-    // request updated key if necessary
-    char * requestMsg = "get-key";
-    int contentLength = strlen(requestMsg);
-    u_long netContentLength = 0;
-    netContentLength = htonl(contentLength);
-    send(AuthSocket, &netContentLength, 4, 0);
-
-    send(AuthSocket, requestMsg, contentLength, 0);
-    char publicKeyServer[PEM_FILE_LEN];
-    char publicKeyServerBuffer[PEM_FILE_LEN];
-
-    // receive key, make sure that all the bytes are received
-    int iResult = 0;
-    int bytesRecv = 0;
-    while (bytesRecv < PEM_FILE_LEN) {
-        iResult = recv(AuthSocket, publicKeyServerBuffer, PEM_FILE_LEN, 0);
-        memcpy(publicKeyServer + bytesRecv, publicKeyServerBuffer, iResult);
-        bytesRecv += iResult;
-    }
-
-
-    // cache key
-    FILE *fptr;
-    fptr = fopen(SERVER_KEY_PATH,"wb");
-    if(fptr!=NULL){
-        fwrite(publicKeyServer, 1, PEM_FILE_LEN, fptr);
-        fclose(fptr);
-    } else {
-        perror("file error");
-    }
+    FILE * fptr;
     int length;
 
-    // send client's public key
-    fptr = fopen(PUBLIC_KEY_PATH,"rb");
-    if (fptr)
-    {
-        fseek (fptr, 0, SEEK_END);
-        length = ftell (fptr);
-        char buffer[length];
-        rewind(fptr);
-        if (buffer)
+    if (flag == 0) { // public key
+        fptr = fopen(PUBLIC_KEY_PATH,"rb");
+        if (fptr)
         {
-            fread (buffer, 1, length, fptr);
+            fseek (fptr, 0, SEEK_END);
+            length = ftell (fptr);
+            char buffer[length];
+            char * key = malloc(PEM_FILE_LEN);
+            rewind(fptr);
+            if (buffer)
+            {
+                fread (buffer, 1, length, fptr);
+                memcpy(key, buffer, PEM_FILE_LEN);
+            }
+            fclose (fptr);
+            return key;
         }
+    } else if (flag == 1) {
+        // private key
+        RSA * keyPair;
+
+        FILE *fptr2;
+        length = 0;
+
+        fptr = fopen(PRIVATE_KEY_PATH,"rb");
+        RSA * privateKey = RSA_new();
+        EVP_PKEY * evp = EVP_PKEY_new();
+        privateKey = PEM_read_RSAPrivateKey(fptr, &privateKey, NULL, NULL);
+        if (privateKey == NULL) {
+            return NULL;
+        }
+//        privateKey = EVP_PKEY_get0_RSA(evp);
+        RSA_size(privateKey);
+        fclose(fptr);
+        return (char *)privateKey;
+        
+    } else { // public server key
+        fptr = fopen(SERVER_KEY_PATH,"rb");
+        RSA * pubkey = RSA_new();
+        EVP_PKEY * evp = EVP_PKEY_new();
+        evp = PEM_read_PUBKEY(fptr, &evp, NULL, NULL);
+        if (evp == NULL) {
+            return NULL;
+        }
+        pubkey = EVP_PKEY_get0_RSA(evp);
+        RSA_size(pubkey);
         fclose (fptr);
-        send(AuthSocket, buffer, PEM_FILE_LEN, 0);
-        closesocket(AuthSocket);
-        return 0;
+        return (char *) pubkey;
     }
 
-    return 0;
+    return NULL;
 }
+
 
 int genKey() {
     // check for existing key
+    FILE *fptr;
+    RSA * keyPair = RSA_new();
+    keyPair = malloc(KEY_LEN);
+    if (retrieveKey(1) != NULL) {
+        memcpy(keyPair,  (RSA *)retrieveKey(1), KEY_LEN);
+
+        if (RSA_check_key(keyPair)) { // if there's already a key
+            return 0;
+        }
+    }
+
+    printf("generating key... \n");
+
+    // generate new key using OpenSSL
     RSA * key = 0;
     struct bignum_st * bn = 0;
     int err = 0;
@@ -163,10 +177,13 @@ int genKey() {
         RSA_free(key);
         return err;
     }
+    RSA * test = RSAPrivateKey_dup(key);
 
-    FILE *fptr;
+
+    // cache it to files.
     fptr = fopen(PRIVATE_KEY_PATH,"wb");
-    fwrite(key, 1, 256, fptr);
+
+    PEM_write_RSAPrivateKey(fptr, test, NULL, NULL,0, 0, NULL);
     fclose(fptr);
 
     fptr = fopen(PUBLIC_KEY_PATH,"wb");
@@ -176,42 +193,128 @@ int genKey() {
     return 0;
 }
 
-int thread(SOCKET * ProxySocket, struct addrinfo * result) {
-    int iResult = 0;
-    char sendbuf[2048];
-    char proxyBuffer[DEFAULT_BUFLEN];
-    RSA * serverKey;
+
+
+char * keysExchange(const SOCKET *AuthSocket) {
+
+    // request updated key if necessary
+    FILE * fptr;
+
+    char publicKeyServer[PEM_FILE_LEN];
+
+    // receive key, make sure that all the bytes are received
+    recv(*AuthSocket, publicKeyServer, PEM_FILE_LEN, MSG_WAITALL);
+
+    printf("key: %s \n", publicKeyServer);
+
+    // cache key
+    fptr = fopen(SERVER_KEY_PATH,"wb");
+    if(fptr!=NULL){
+        fwrite(publicKeyServer, 1, PEM_FILE_LEN, fptr);
+        fclose(fptr);
+    } else {
+        perror("file error");
+    }
+
+    // send client's public key
+    char * publicKey = retrieveKey(0);
+
+    send(*AuthSocket, publicKey, PEM_FILE_LEN, 0);
+
+    // receive session ID
+    u_char sessionBuff[KEY_LEN];
+    u_char * sessionID = malloc(SESSION_ID_LEN);
+    recv(*AuthSocket, sessionBuff, KEY_LEN, 0);
+
+    // decrypt
+    RSA * privateKeyRSA = (RSA *)retrieveKey(1);
+    RSA_private_decrypt(KEY_LEN, sessionBuff, sessionID, privateKeyRSA, RSA_PKCS1_OAEP_PADDING);
+    printf("session ID: %s \n", (char *) sessionID);
+
+    fptr = fopen("session.txt","wb");
+    if(fptr!=NULL){
+        fwrite(sessionID, 1, SESSION_ID_LEN, fptr);
+        fclose(fptr);
+    } else {
+        perror("file error");
+    }
+
+    return (char *) sessionID;
+}
+
+
+// Start a session. returns sessionID
+char * auth(SOCKET * AuthSocket, int flag) {
+
+    printf("Authenticating... \n");
+    genKey();
+    // check for session ID and validate time:
+    char * sessionID = malloc(SESSION_ID_LEN);
+    FILE *fptr;
+    int length = 0;
     RSA * keyPair;
 
-    FILE *fptr;
-    FILE *fptr2;
-    int length = 0;
-
-    fptr = fopen(PRIVATE_KEY_PATH,"rb");
+    // retrieve sessionID
+    fptr = fopen("session.txt","rb");
     if (fptr)
     {
         fseek (fptr, 0, SEEK_END);
         length = ftell (fptr);
-        char buffer[length];
+        char * buffer = malloc(length);
         memset(buffer, 0, length);
         rewind(fptr);
         if (buffer)
         {
             fread (buffer, 1, length, fptr);
-            keyPair = malloc(sizeof(buffer));
-            memcpy(keyPair, (RSA *)buffer, sizeof(buffer));
+            memcpy(sessionID, buffer, SESSION_ID_LEN);
         }
         fclose (fptr);
     }
 
-    fptr2 = fopen(SERVER_KEY_PATH,"rb");
 
-    RSA * pubkey = RSA_new();
-    EVP_PKEY * evp = EVP_PKEY_new();
-    evp = PEM_read_PUBKEY(fptr2, &evp, NULL, NULL);
-    pubkey = EVP_PKEY_get0_RSA(evp);
-    RSA_size(pubkey);
-    fclose (fptr2);
+    // send session ID or a null array.
+    if (length == 0 || flag == 0) {
+        printf("no session ID \n");
+        char * emptySessionID = malloc(SESSION_ID_LEN);
+        memset(emptySessionID, 0, SESSION_ID_LEN);
+        send(*AuthSocket,emptySessionID, SESSION_ID_LEN, 0);
+    } else {
+        send(*AuthSocket,sessionID, SESSION_ID_LEN, 0);
+        printf("session ID: %s", sessionID);
+    }
+
+
+    // receive server response...
+    char * lenChar = malloc(4);
+    int netContentLength = 0;
+    int contentLength = 0;
+    recv(*AuthSocket, &netContentLength, 4, 0);
+    contentLength = ntohl(netContentLength);
+    printf("contentLength: %d \n", contentLength);
+    char serverResponse[contentLength];
+
+    recv(*AuthSocket, serverResponse, contentLength, 0);
+
+
+    if (strcmp("ok", serverResponse) == 0) {
+        return sessionID;
+    } else {
+        // exchange keys again and receive new sessionID...
+        printf("exchanging keys... \n");
+        char * newSessionID = keysExchange(AuthSocket);
+
+        return newSessionID;
+    }
+}
+
+
+
+int client(const SOCKET * ProxySocket, struct addrinfo * result) {
+    int iResult = 0;
+    char sendbuf[2048];
+    char proxyBuffer[DEFAULT_BUFLEN];
+    RSA * keyPair;
+
 
     while (true) {
         iResult = 0;
@@ -224,17 +327,38 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
         memset(proxyBuffer, 0, sizeof(proxyBuffer));
 
         // Intercept http requests
-        // TODO: accept entire requests + body
         int bytesRecvProxy = 0;
-        char * request = (char *)malloc(DEFAULT_BUFLEN);
+        char * request = malloc(DEFAULT_BUFLEN);
+
         while (!strstr(proxyBuffer, "\r\n\r\n")) {
-            iResult = recv(*ProxySocket, proxyBuffer, DEFAULT_BUFLEN, 0);
+            memset(proxyBuffer, 0, DEFAULT_BUFLEN);
+
+            // Peek before receiving, to see the end of the headers.
+            iResult = recv(*ProxySocket, proxyBuffer, DEFAULT_BUFLEN, MSG_PEEK);
+            if (strstr(proxyBuffer, "\r\n\r\n")) {
+                // check the length until the CRLFCRLF sequence
+                char * bufferPointer = proxyBuffer;
+                char * end = strstr(proxyBuffer, "\r\n\r\n");
+                int lastChunkLen = end - bufferPointer + 4;
+                memset(proxyBuffer, 0, DEFAULT_BUFLEN);
+                iResult = recv(*ProxySocket, proxyBuffer, lastChunkLen, 0);
+            } else {
+                iResult = recv(*ProxySocket, proxyBuffer, DEFAULT_BUFLEN, 0);
+            }
+            if (iResult == SOCKET_ERROR) {
+                closesocket(*ProxySocket);
+                return -1;
+            }
+
             request = (char *) realloc(request, bytesRecvProxy + iResult);
             memset(request + bytesRecvProxy, 0, iResult);
-            memcpy(request + bytesRecvProxy, proxyBuffer, iResult);
-            bytesRecvProxy += iResult;
-        }
 
+            memcpy(request + bytesRecvProxy, proxyBuffer, iResult);
+
+            bytesRecvProxy += iResult;
+            if (iResult == SOCKET_ERROR)
+                return -1;
+        }
 
         //filter out https requests (e.g. CONNECT)
 
@@ -246,45 +370,34 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
         int contentLength = 0;
         char requestCopyTmp[strlen(request)];
         strcpy(requestCopyTmp, request);
+        int total = bytesRecvProxy;
 
-        if (strstr(lowerstring(requestCopyTmp), "content-length")) {
-
+        if (strstr(lowerString(requestCopyTmp), "content-length")) {
             char * terminators = strstr(request, "\r\n\r\n");
             int headers_len = (int)(terminators - request);
-            int len = 0;
-            int total;
-            int bytesLeftProxy;
+            int len = getContentLength(request);
 
-            len = getContentLength(request);
             total = headers_len + len + 4;
-            bytesLeftProxy = total - bytesRecvProxy;
-            while (total > bytesRecvProxy) {
-                memset(proxyBuffer, 0, DEFAULT_BUFLEN);
-
-                if (bytesLeftProxy < DEFAULT_BUFLEN) {
-                    iResult = recv(*ProxySocket, proxyBuffer, bytesLeftProxy, 0);
-                    request = (char *) realloc(request, bytesRecvProxy + iResult);
-                    memset(request + bytesRecvProxy, 0, bytesLeftProxy);
-                    memcpy(request + bytesRecvProxy, proxyBuffer, bytesLeftProxy);
-                    printf("Bytes received from Webserver: %d \n", iResult);
-                } else {
-                    iResult = recv(*ProxySocket, proxyBuffer, DEFAULT_BUFLEN, 0);
-                    request = (char *) realloc(request, bytesRecvProxy + iResult);
-                    memset(request + bytesRecvProxy, 0, iResult);
-                    memcpy(request + bytesRecvProxy, proxyBuffer, iResult);
-                    printf("Bytes received from Webserver: %d \n", iResult);
-                }
-
-                bytesRecvProxy += iResult;
-                bytesLeftProxy = total - bytesRecvProxy;
-            }
+            recv(*ProxySocket, proxyBuffer, len, MSG_WAITALL);
+            request = (char *) realloc(request,  total);
+            memcpy(request, proxyBuffer, headers_len + 4);
         }
 
-
         printf(request);
+        contentLength = total;
 
-        contentLength = bytesRecvProxy;
-        SOCKET VpnSocket = connecttoserver(result);
+        SOCKET VpnSocket = connectToServer(result);
+
+        // if no server key
+        if (retrieveKey(2) == NULL) {
+            auth(&VpnSocket, 0);
+
+        } else {
+            auth(&VpnSocket, 1);
+        }
+        printf("authentication complete. \n");
+        keyPair = (RSA *)retrieveKey(1);
+
 
         char * message = request;
         sent = false;
@@ -292,13 +405,13 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
         int startIndex = 0;
         int endIndex = DEFAULT_BUFLEN;
         u_char bytesInt[4];
-        u_char encryptedBytes[RSA_size(pubkey)];
+        RSA * serverKey = (RSA *)retrieveKey(2);
+        u_char encryptedBytes[RSA_size(serverKey)];
 
         printf("Content Length: %d", contentLength);
 
-
         memcpy(bytesInt, &contentLength, 4);
-        RSA_public_encrypt(4, bytesInt, encryptedBytes, pubkey, RSA_PKCS1_OAEP_PADDING);
+        RSA_public_encrypt(4, bytesInt, encryptedBytes, serverKey, RSA_PKCS1_OAEP_PADDING);
 
         // send the length of the request to the server as part of the protocol
         send(VpnSocket, encryptedBytes, KEY_LEN,0);
@@ -319,11 +432,11 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
             //Current batch length.
             if (bytesLeft > DEFAULT_BUFLEN) {
                 u_char messageBytes[DEFAULT_BUFLEN];
-                u_char encryptedMessage[RSA_size(pubkey)];
-                memset(encryptedMessage, 0, RSA_size(pubkey));
+                u_char encryptedMessage[RSA_size(serverKey)];
+                memset(encryptedMessage, 0, RSA_size(serverKey));
                 memcpy(messageBytes, curMessage, DEFAULT_BUFLEN);
 
-                RSA_public_encrypt(DEFAULT_BUFLEN, messageBytes, encryptedMessage, pubkey, RSA_PKCS1_OAEP_PADDING);
+                RSA_public_encrypt(DEFAULT_BUFLEN, messageBytes, encryptedMessage, serverKey, RSA_PKCS1_OAEP_PADDING);
 
                 iResult = send(VpnSocket, encryptedMessage, KEY_LEN, 0);
                 startIndex = endIndex;
@@ -333,10 +446,10 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
             // Final batch.
             else if (bytesLeft <= DEFAULT_BUFLEN) {
                 u_char messageBytes[bytesLeft];
-                u_char encryptedMessage[RSA_size(pubkey)];
+                u_char encryptedMessage[RSA_size(serverKey)];
                 memcpy(messageBytes, curMessage, bytesLeft);
 
-                RSA_public_encrypt(bytesLeft, messageBytes, encryptedMessage, pubkey, RSA_PKCS1_OAEP_PADDING);
+                RSA_public_encrypt(bytesLeft, messageBytes, encryptedMessage, serverKey, RSA_PKCS1_OAEP_PADDING);
 
                 iResult = send(VpnSocket, encryptedMessage, KEY_LEN, 0);
                 bytesLeft = 0;
@@ -373,7 +486,6 @@ int thread(SOCKET * ProxySocket, struct addrinfo * result) {
         }
 
         RSA_private_decrypt(KEY_LEN, bytes, decryptedBytes, keyPair, RSA_PKCS1_OAEP_PADDING);
-
         memcpy(&contentLength, decryptedBytes, 4);
 
         bytesLeft = contentLength;
@@ -519,8 +631,7 @@ int main() {
     OPENSSL_INIT_new();
 
     RSA * key = RSA_new();
-    genKey();
-    auth(result, key);
+
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
@@ -544,8 +655,13 @@ int main() {
         }
 
         iResult = getaddrinfo("127.0.0.1", DEFAULT_PORT, &hints, &result);
+        if (iResult != 0) {
+            printf("getaddrinfo failed: %d, couldn't connect to server\n", iResult);
+            WSACleanup();
+            return 1;
+        }
 
-        thread( &ProxySocket, result);
+        client(&ProxySocket, result);
     }
 #pragma clang diagnostic pop
 }

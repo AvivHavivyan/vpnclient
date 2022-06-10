@@ -15,12 +15,15 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="35cf097c-e492-4446-afbf-064ff93912f5" name="Changes" comment="http works? and i kinda started encryption - keys exchange so far.">
+    <list default="true" id="35cf097c-e492-4446-afbf-064ff93912f5" name="Changes" comment="http works. ensuring that all the data is received. intercepting full requests, encryption works.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client.c" beforeDir="false" afterPath="$PROJECT_DIR$/client.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/3.21.1/CMakeDetermineCompilerABI_C.bin" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/3.21.1/CMakeDetermineCompilerABI_C.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/CMakeOutput.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/CMakeOutput.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/start.c" beforeDir="false" afterPath="$PROJECT_DIR$/start.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -164,7 +167,17 @@
       <workItem from="1654422736999" duration="19799000" />
       <workItem from="1654451628731" duration="3998000" />
       <workItem from="1654455667792" duration="10927000" />
-      <workItem from="1654507324938" duration="28541000" />
+      <workItem from="1654507324938" duration="29017000" />
+      <workItem from="1654555076194" duration="17000" />
+      <workItem from="1654594697987" duration="9540000" />
+      <workItem from="1654636670745" duration="541000" />
+      <workItem from="1654697245768" duration="18477000" />
+      <workItem from="1654727749625" duration="8000" />
+      <workItem from="1654765329273" duration="11344000" />
+      <workItem from="1654801402336" duration="910000" />
+      <workItem from="1654802704726" duration="1195000" />
+      <workItem from="1654852921251" duration="6637000" />
+      <workItem from="1654869698963" duration="1000" />
     </task>
     <task id="LOCAL-00001" summary="multiple messages?(not working)">
       <created>1643473277918</created>
@@ -257,7 +270,21 @@
       <option name="project" value="LOCAL" />
       <updated>1654440488412</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="http works. ensuring that all the data is received. intercepting full requests, encryption works.">
+      <created>1654554890170</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1654554890170</updated>
+    </task>
+    <task id="LOCAL-00015" summary="http works. ensuring that all the data is received. intercepting full requests, encryption works.">
+      <created>1654555088631</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1654555088631</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -298,9 +325,24 @@
     <MESSAGE value="added send back to proxy port." />
     <MESSAGE value="fixed inconsistency between devices (thx saji ur the best)" />
     <MESSAGE value="http works? and i kinda started encryption - keys exchange so far." />
-    <option name="LAST_COMMIT_MESSAGE" value="http works? and i kinda started encryption - keys exchange so far." />
+    <MESSAGE value="http works. ensuring that all the data is received. intercepting full requests, encryption works." />
+    <option name="LAST_COMMIT_MESSAGE" value="http works. ensuring that all the data is received. intercepting full requests, encryption works." />
   </component>
   <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/client.c</url>
+          <line>417</line>
+          <option name="timeStamp" value="56" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/client.c</url>
+          <line>351</line>
+          <option name="timeStamp" value="58" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
     <watches-manager>
       <configuration name="CMakeRunConfiguration">
         <watch expression="iResult" />

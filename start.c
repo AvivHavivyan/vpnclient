@@ -1,12 +1,8 @@
-//
-// Created by Aviv on 13/03/2022.
-//
+
 
 #include <stdlib.h>
-#include <process.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <winsock.h>
 
 int main() {
     system("start vpnclient.exe");
