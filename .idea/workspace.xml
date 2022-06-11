@@ -15,13 +15,11 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="35cf097c-e492-4446-afbf-064ff93912f5" name="Changes" comment="http works. ensuring that all the data is received. intercepting full requests, encryption works.">
+    <list default="true" id="35cf097c-e492-4446-afbf-064ff93912f5" name="Changes" comment="authentication works!!!">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client.c" beforeDir="false" afterPath="$PROJECT_DIR$/client.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/3.21.1/CMakeDetermineCompilerABI_C.bin" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/3.21.1/CMakeDetermineCompilerABI_C.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/CMakeOutput.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/CMakeOutput.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/start.c" beforeDir="false" afterPath="$PROJECT_DIR$/start.c" afterDir="false" />
     </list>
@@ -72,7 +70,7 @@
     <property name="cf.first.check.clang-format" value="false" />
     <property name="cidr.known.project.marker" value="true" />
     <property name="cmake.loaded.for.project" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../vpn" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
@@ -177,7 +175,12 @@
       <workItem from="1654801402336" duration="910000" />
       <workItem from="1654802704726" duration="1195000" />
       <workItem from="1654852921251" duration="6637000" />
-      <workItem from="1654869698963" duration="1000" />
+      <workItem from="1654869698963" duration="109000" />
+      <workItem from="1654870578617" duration="1313000" />
+      <workItem from="1654880299211" duration="7953000" />
+      <workItem from="1654901231431" duration="3082000" />
+      <workItem from="1654953919261" duration="710000" />
+      <workItem from="1654959513231" duration="2460000" />
     </task>
     <task id="LOCAL-00001" summary="multiple messages?(not working)">
       <created>1643473277918</created>
@@ -284,7 +287,14 @@
       <option name="project" value="LOCAL" />
       <updated>1654555088631</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="authentication works!!!">
+      <created>1654869735521</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1654869735521</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -326,20 +336,16 @@
     <MESSAGE value="fixed inconsistency between devices (thx saji ur the best)" />
     <MESSAGE value="http works? and i kinda started encryption - keys exchange so far." />
     <MESSAGE value="http works. ensuring that all the data is received. intercepting full requests, encryption works." />
-    <option name="LAST_COMMIT_MESSAGE" value="http works. ensuring that all the data is received. intercepting full requests, encryption works." />
+    <MESSAGE value="authentication works!!!" />
+    <option name="LAST_COMMIT_MESSAGE" value="authentication works!!!" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/client.c</url>
-          <line>417</line>
-          <option name="timeStamp" value="56" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/client.c</url>
-          <line>351</line>
-          <option name="timeStamp" value="58" />
+          <line>450</line>
+          <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
